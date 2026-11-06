@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'core/theme.dart';
+import 'providers/auth_provider.dart';
+import 'screens/auth_gate.dart';
+import 'services/auth_service.dart';
 import 'widgets/gradient_background.dart';
 
 class App extends StatelessWidget {
@@ -7,18 +11,16 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Campus Incident Reporter',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      builder: (context, child) => GradientBackground(child: child!),
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'Firebase connected!',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-        ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
+      ],
+      child: MaterialApp(
+        title: 'Campus Incident Reporter',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        builder: (context, child) => GradientBackground(child: child!),
+        home: const AuthGate(),
       ),
     );
   }

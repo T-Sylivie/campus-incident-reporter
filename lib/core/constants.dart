@@ -36,3 +36,6 @@ const campusLocations = [
   'Sports Ground',
   'Other',
 ];
+
+// Only these email domains can register. Change to match your ALU email.
+const allowedEmailDomains = ['alustudent.com', 'alueducation.com'];
