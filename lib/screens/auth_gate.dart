@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'auth/login_screen.dart';
 import 'auth/verify_email_screen.dart';
-import 'home/home_screen.dart';
+import 'shell/main_shell.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -17,6 +17,6 @@ class AuthGate extends StatelessWidget {
     }
     if (!auth.isLoggedIn) return const LoginScreen();
     if (!auth.isVerified) return const VerifyEmailScreen();
-    return const HomeScreen();
+    return const MainShell();
   }
 }
