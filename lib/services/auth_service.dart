@@ -21,15 +21,24 @@ class AuthService {
       password: password,
     );
     final user = cred.user!;
-    await user.updateDisplayName(name.trim());
-    // Everyone registers as a student. Staff role is granted by an admin.
-    await _db.collection('users').doc(user.uid).set({
-      'name': name.trim(),
-      'email': email.trim().toLowerCase(),
-      'role': Roles.student,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    await user.sendEmailVerification();
+
+    try {
+      await user.updateDisplayName(name.trim());
+      // Everyone registers as a student. Staff role is granted by an admin.
+      await _db.collection('users').doc(user.uid).set({
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'role': Roles.student,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      await user.sendEmailVerification();
+    } catch (e) {
+      // Do not leave a login without a profile: undo the registration.
+      try {
+        await user.delete();
+      } catch (_) {}
+      rethrow;
+    }
     return user;
   }
 

@@ -7,6 +7,7 @@ import '../../models/incident.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/incident_provider.dart';
 import '../../widgets/status_badge.dart';
+import '../../widgets/staff_status_panel.dart';
 
 class IncidentDetailsScreen extends StatelessWidget {
   final String incidentId;
@@ -107,6 +108,10 @@ class IncidentDetailsScreen extends StatelessWidget {
             Text('Status timeline', style: text.titleMedium),
             const SizedBox(height: 12),
             _Timeline(incident: i),
+            if (auth.isStaff) ...[
+              const SizedBox(height: 20),
+              StaffStatusPanel(incident: i),
+            ],
             if (canDelete) ...[
               const SizedBox(height: 24),
               OutlinedButton.icon(
