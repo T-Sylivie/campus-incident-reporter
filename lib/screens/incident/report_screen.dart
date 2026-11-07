@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
@@ -22,12 +24,58 @@ class _ReportScreenState extends State<ReportScreen> {
   String _urgency = Urgency.medium;
   bool _anonymous = false;
   bool _categoryError = false;
+  File? _photo;
 
   @override
   void dispose() {
     _title.dispose();
     _description.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      // Compress on the phone before uploading.
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 1280,
+      );
+      if (picked != null) setState(() => _photo = File(picked.path));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the camera or gallery.')),
+      );
+    }
+  }
+
+  void _showPhotoOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickPhoto(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -46,7 +94,7 @@ class _ReportScreenState extends State<ReportScreen> {
       location: _location!,
       urgency: _urgency,
       isAnonymous: _anonymous,
-      // TODO(photo): pass the uploaded photo URL here once storage is set up.
+      image: _photo,
     );
 
     if (!mounted) return;
@@ -96,6 +144,57 @@ class _ReportScreenState extends State<ReportScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _photoPicker() {
+    if (_photo == null) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: _showPhotoOptions,
+        child: Container(
+          height: 72,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFD9B98F)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_a_photo_outlined, color: AppColors.muted),
+              SizedBox(width: 10),
+              Text('Add a photo (optional)',
+                  style: TextStyle(color: AppColors.muted)),
+            ],
+          ),
+        ),
+      );
+    }
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.file(
+            _photo!,
+            height: 180,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: CircleAvatar(
+            backgroundColor: AppColors.card,
+            child: IconButton(
+              tooltip: 'Remove photo',
+              icon: const Icon(Icons.close, color: AppColors.brown),
+              onPressed: () => setState(() => _photo = null),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -192,19 +291,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // TODO(photo): replace with a real picker + upload later.
-                Container(
-                  height: 56,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFD9B98F)),
-                  ),
-                  child: const Text(
-                    'Photo upload coming soon (optional)',
-                    style: TextStyle(color: AppColors.muted),
-                  ),
-                ),
+                _photoPicker(),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,

@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function aluEmail() {
+      return signedIn()
+        && request.auth.token.email.lower()
+             .matches('.*@(alustudent|alueducation)[.]com');
+    }
+
+    function verified() {
+      return aluEmail() && request.auth.token.email_verified == true;
+    }
+
+    function isStaff() {
+      return verified()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+             .data.role == 'staff';
+    }
+
+    // ---------- users ----------
+    match /users/{uid} {
+      // A person reads their own profile; staff can read any profile.
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+
+      // Created once, at registration. Always a student.
+      allow create: if aluEmail()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(
+             ['name', 'email', 'role', 'createdAt'])
+        && request.resource.data.role == 'student'
+        && request.resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.createdAt == request.time;
+
+      // Profiles are never edited from the app. Roles change only in the
+      // Firebase Console, which is not subject to these rules.
+      allow update, delete: if false;
+    }
+
+    // ---------- incidents ----------
+    match /incidents/{id} {
+      allow read: if verified();
+
+      allow create: if verified()
+        && request.resource.data.keys().hasAll(
+             ['title', 'description', 'category', 'location', 'urgency',
+              'status', 'isAnonymous', 'reporterId', 'createdAt',
+              'updatedAt', 'history'])
+        && request.resource.data.keys().hasOnly(
+             ['title', 'description', 'category', 'location', 'urgency',
+              'status', 'isAnonymous', 'reporterId', 'reporterName',
+              'imageUrl', 'createdAt', 'updatedAt', 'history'])
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.status == 'Submitted'
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 5
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.description is string
+        && request.resource.data.description.size() >= 10
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.location is string
+        && request.resource.data.category in
+             ['Facilities', 'Water', 'Electricity', 'Safety',
+              'Sanitation', 'Other']
+        && request.resource.data.urgency in ['Low', 'Medium', 'High']
+        && request.resource.data.isAnonymous is bool
+        // Anonymous reports must not store the reporter's name.
+        && (request.resource.data.isAnonymous == false
+            || !('reporterName' in request.resource.data.keys()))
+        && (!('imageUrl' in request.resource.data.keys())
+            || (request.resource.data.imageUrl is string
+                && request.resource.data.imageUrl.matches('https://.*')))
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.history.size() == 1
+        && request.resource.data.history[0].status == 'Submitted';
+
+      // Only staff may change a report, and only these three fields.
+      allow update: if isStaff()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'updatedAt', 'history'])
+        && request.resource.data.status in
+             ['Submitted', 'In Progress', 'Resolved']
+        && request.resource.data.updatedAt == request.time;
+
+      // Students may delete their own report only while it is still new.
+      allow delete: if verified()
+        && resource.data.reporterId == request.auth.uid
+        && resource.data.status == 'Submitted';
+    }
+  }
+}

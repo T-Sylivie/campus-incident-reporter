@@ -7,6 +7,7 @@ import 'screens/auth_gate.dart';
 import 'services/auth_service.dart';
 import 'services/incident_service.dart';
 import 'widgets/gradient_background.dart';
+import 'services/storage_service.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -19,7 +20,8 @@ class App extends StatelessWidget {
         // Follows the signed-in user: starts listening after login,
         // stops and clears after logout.
         ChangeNotifierProxyProvider<AuthProvider, IncidentProvider>(
-          create: (_) => IncidentProvider(IncidentService()),
+          /* create: (_) => IncidentProvider(IncidentService()), */
+          create: (_) => IncidentProvider(IncidentService(), StorageService()),          
           update: (_, auth, incidents) {
             incidents!.bind(
               auth.isLoggedIn && auth.isVerified ? auth.profile : null,

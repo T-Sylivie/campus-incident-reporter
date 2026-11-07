@@ -3,9 +3,13 @@ import 'package:flutter/foundation.dart';
 import '../models/app_user.dart';
 import '../models/incident.dart';
 import '../services/incident_service.dart';
+import 'dart:io';
+import '../services/storage_service.dart';
 
 class IncidentProvider extends ChangeNotifier {
+  /* final IncidentService _service; */
   final IncidentService _service;
+  final StorageService _storage;
   StreamSubscription<List<Incident>>? _sub;
   AppUser? _user;
   String? _boundUid;
@@ -20,7 +24,9 @@ class IncidentProvider extends ChangeNotifier {
   String? _statusFilter;
   String? _categoryFilter;
 
-  IncidentProvider(this._service);
+  /* IncidentProvider(this._service); */
+  IncidentProvider(this._service, this._storage);
+
 
   // ---- Read-only state for the UI ----
   bool get loading => _loading;
@@ -117,7 +123,7 @@ class IncidentProvider extends ChangeNotifier {
   }
 
   // ---- Actions ----
-  Future<bool> submit({
+/*   Future<bool> submit({
     required String title,
     required String description,
     required String category,
@@ -138,7 +144,37 @@ class IncidentProvider extends ChangeNotifier {
           isAnonymous: isAnonymous,
           imageUrl: imageUrl,
         ));
+  } */
+      Future<bool> submit({
+    required String title,
+    required String description,
+    required String category,
+    required String location,
+    required String urgency,
+    required bool isAnonymous,
+    File? image,
+  }) {
+    final user = _user;
+    if (user == null) return Future.value(false);
+    return _run(() async {
+      String? imageUrl;
+      if (image != null) {
+        imageUrl = await _storage.uploadImage(image);
+      }
+      await _service.create(
+        reporter: user,
+        title: title,
+        description: description,
+        category: category,
+        location: location,
+        urgency: urgency,
+        isAnonymous: isAnonymous,
+        imageUrl: imageUrl,
+      );
+    });
   }
+
+
 
   Future<bool> updateStatus(String id, String status, String note) {
     final user = _user;
