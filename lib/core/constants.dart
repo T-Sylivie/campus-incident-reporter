@@ -12,6 +12,13 @@ class IncidentStatus {
   static const all = [submitted, inProgress, resolved];
 }
 
+class Urgency {
+  static const low = 'Low';
+  static const medium = 'Medium';
+  static const high = 'High';
+  static const all = [low, medium, high];
+}
+
 class IncidentCategory {
   final String name;
   final IconData icon;
